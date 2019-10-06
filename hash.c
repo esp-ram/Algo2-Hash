@@ -1,9 +1,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 #define TAM_INICIAL 32
 #define FACTOR_CARGA 0.6
 #define FACTOR_REDIMENSION 2
+
+
 
 
 typedef void (*hash_destruir_dato_t)(void *);
@@ -43,6 +46,8 @@ campo_t* new_campo(){
     return nuevo_campo;
 }
 
+bool hash_guardar(hash_t *hash, const char *clave, void *dato);
+
 
 void redimensionar_hash(hash_t* hash,size_t tamano){
     campo_t** campo_viejo = hash->campo;
@@ -53,20 +58,24 @@ void redimensionar_hash(hash_t* hash,size_t tamano){
         hash->cantidad = 0;
         hash->borrados = 0;
         hash->campo = campo_redimensionado;
+
         for(int j = 0;j < hash->capacidad;j++){
           hash->campo[j] = new_campo();
         }
 
         for(int i = 0; i < capacidad_vieja; i++){
             if (campo_viejo[i]->estado == 1){
-              /////////////////////////////////////////////////////////////////////////////////////TERMINAR
+              /////////////////ERROR/////////////////ERROR/////////////////ERROR/////////////////ERROR
+              //////TEST/////
+              char* clave_n = calloc(strlen(campo_viejo[i]->clave+1),sizeof(char));
+              strcpy(clave_n, campo_viejo[i]->clave);
+              //////TEST/////
               //char* clave_n = campo_viejo[i]->clave;
-              //void* valor_n = campo_viejo[i]->valor;
-              NULL;
-              //hash_guardar(hash,clave_n,&valor_n);
-              //printf("%s",clave_n);
+              void* valor_n = campo_viejo[i]->valor;
+              hash_guardar(hash,campo_viejo[i]->clave,campo_viejo[i]->valor);
             }
         }
+        ///// liberar memoria de campo_viejo
     }
 }
 
@@ -76,7 +85,6 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     if (nuevo_hash == NULL) {
         return NULL;
     }
-
     nuevo_hash->campo = malloc(TAM_INICIAL * sizeof(campo_t*));
     if (nuevo_hash->campo == NULL){
         free(nuevo_hash);
@@ -99,10 +107,11 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
     //REEMPLAZO
-    if (hash->campo[posicion]->clave == clave){
-        ////////////////////////////////////////////////////////////////////////////TERMINAR
-        //void* dato_a_destruir = hash->campo[posicion]->valor;
-        //destruir dato_a_destruir
+    if ((hash->campo[posicion]->estado == 1)&&(strcmp(hash->campo[posicion]->clave, clave) == 0)){
+        void* dato_a_destruir = hash->campo[posicion]->valor;
+        if (hash->destruir_dato != NULL){
+            hash->destruir_dato(dato_a_destruir);
+        }
     }else {
         while(hash->campo[posicion]->estado != 0){
             posicion ++;
@@ -110,7 +119,8 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
                 posicion = 0;
             }
         }
-        hash->campo[posicion]->clave = clave;
+        hash->campo[posicion]->clave = calloc(strlen(clave)+1,sizeof(char));
+        strcpy(hash->campo[posicion]->clave, clave);
         hash->cantidad += 1;
     }
     hash->campo[posicion]->valor = dato;
@@ -122,13 +132,13 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 }
 
 bool hash_pertenece_interno(unsigned long key,const hash_t* hash,const char* clave){
-    while((hash->campo[key]->estado != 0) && (hash->campo[key]->clave != clave)){
+    while((hash->campo[key]->estado != 0) && (strcmp(hash->campo[key]->clave, clave) != 0)){
         key ++;
         if (key >= hash->capacidad){
             key = 0;
         }
     }
-    if(hash->campo[key]->estado == 1 && hash->campo[key]->clave == clave){
+    if((hash->campo[key]->estado == 1) && (strcmp(hash->campo[key]->clave, clave) == 0)){
         return true;
     }
     return false;
@@ -164,9 +174,11 @@ void *hash_borrar(hash_t *hash, const char *clave){
     hash->campo[posicion]->estado = -1;
     hash->cantidad -= 1;
     hash->borrados += 1;
+
+    ////////////REDIMENSIONAR////////////
+
     return a_devolver;
 }
-
 
 
 void hash_destruir(hash_t *hash){

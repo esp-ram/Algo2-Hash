@@ -148,7 +148,6 @@ static void prueba_hash_reemplazar_con_destruir()
 static void prueba_hash_borrar()
 {
     printf("\nprueba hash borrar\n");
-    printf("\nprueba hash borrar\n");
     hash_t* hash = hash_crear(NULL);
 
     char *clave1 = "perro", *valor1 = "guau";
@@ -262,6 +261,7 @@ static void prueba_hash_volumen(size_t largo, bool debug)
 
     if (debug) print_test("Prueba hash borrar muchos elementos", ok);
     if (debug) print_test("Prueba hash la cantidad de elementos es 0", hash_cantidad(hash) == 0);
+    printf("%ld\n",hash_cantidad(hash));
 
     /* Destruye el hash y crea uno nuevo que sí libera */
     hash_destruir(hash);
