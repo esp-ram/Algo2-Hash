@@ -115,30 +115,33 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     return true;
 }
 
-
-bool hash_pertenece(const hash_t *hash, const char *clave){
-    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    while((hash->campo[posicion]->estado != 0) || (hash->campo[posision]->clave != clave)){
-        posicion ++;
-        if (posicion >= hash->capacidad){
-            posicion = 0;
+bool hash_pertenece_interno(unsigned long key){
+    while((hash->campo[key]->estado != 0) || (hash->campo[key]->clave != clave)){
+        key ++;
+        if (key >= hash->capacidad){
+            key = 0;
         }
     }
-    if(hash->campo[posicion]->estado == 1 && hash->campo[posicion]->clave == clave){
+    if(hash->campo[key]->estado == 1 && hash->campo[key]->clave == clave){
         return true;
     }
     return false
 }
 
 
-void *hash_obtener(const hash_t *hash, const char *clave){
-    if (!hash_pertenece(hash,clave)){
-        return NULL;
-    }
+bool hash_pertenece(const hash_t *hash, const char *clave){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    return a_devolver = hash->campo[posicion]->valor;
+    return hash_pertenece_interno(posicion);
 }
 
+
+void *hash_obtener(const hash_t *hash, const char *clave){
+    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
+    if (!hash_pertenece_interno(posicion)){
+        return NULL;
+    }
+    return hash->campo[posicion]->valor;
+}
 
 
 size_t hash_cantidad(const hash_t *hash){
@@ -147,13 +150,13 @@ size_t hash_cantidad(const hash_t *hash){
 
 
 void *hash_borrar(hash_t *hash, const char *clave){
-    if (!hash_pertenece(hash,clave)){
+    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
+    if (!hash_pertenece_interno(posicion)){
         return NULL;
     }
-    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
     void* a_devolver = hash->campo[posicion]->valor;
     hash->campo[posicion]->estado = -1;
     hash->cantidad -= 1;
-    hash->borradps += 1;
+    hash->borrados += 1;
     return a_devolver;
 }
