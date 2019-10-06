@@ -1,36 +1,39 @@
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stddef.h>
 #define TAM_INICIAL 32
 #define FACTOR_CARGA 0.6
 #define FACTOR_REDIMENSION 2
 
 
-static unsigned long hashing_sdbm(unsigned char *str){
+typedef void (*hash_destruir_dato_t)(void *);
+
+static unsigned long hashing_sdbm(const char *str){
   unsigned long hash = 0;
   int c;
-  while (c = *str++){
+  while ((c = *str++)){
     hash = c + (hash << 6) + (hash << 16) - hash;
   }
   return hash;
 }
 
 
-struct hash{
+///ESTADOS: 0 = vacio,1 = ocupado, -1 = borrado///
+typedef struct campo{
+    char* clave;
+    void* valor;
+    int estado;
+}campo_t;
+
+
+typedef struct hash{
     size_t capacidad;
     size_t cantidad;
     size_t borrados;
     campo_t** campo;
-    void destruir_dato(void*);
-};
+    void (*destruir_dato)(void*);
+}hash_t;
 
-
-
-///ESTADOS: 0 = vacio,1 = ocupado, -1 = borrado///
-struct campo{
-    char* clave;
-    void* valor;
-    int estado;
-};
 
 campo_t* new_campo(){
     campo_t* nuevo_campo = malloc(sizeof(campo_t));
@@ -56,8 +59,10 @@ void redimensionar_hash(hash_t* hash,size_t tamano){
 
         for(int i = 0; i < capacidad_vieja; i++){
             if (campo_viejo[i]->estado == 1){
-              char* clave_n = campo_viejo[i]->clave;
-              void* valor_n = campo_viejo[i]->valor;
+              /////////////////////////////////////////////////////////////////////////////////////TERMINAR
+              //char* clave_n = campo_viejo[i]->clave;
+              //void* valor_n = campo_viejo[i]->valor;
+              NULL;
               //hash_guardar(hash,clave_n,&valor_n);
               //printf("%s",clave_n);
             }
@@ -95,7 +100,8 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
     //REEMPLAZO
     if (hash->campo[posicion]->clave == clave){
-        void* dato_a_destruir = hash->campo[posicion]->valor;
+        ////////////////////////////////////////////////////////////////////////////TERMINAR
+        //void* dato_a_destruir = hash->campo[posicion]->valor;
         //destruir dato_a_destruir
     }else {
         while(hash->campo[posicion]->estado != 0){
@@ -115,8 +121,8 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     return true;
 }
 
-bool hash_pertenece_interno(unsigned long key){
-    while((hash->campo[key]->estado != 0) || (hash->campo[key]->clave != clave)){
+bool hash_pertenece_interno(unsigned long key,const hash_t* hash,const char* clave){
+    while((hash->campo[key]->estado != 0) && (hash->campo[key]->clave != clave)){
         key ++;
         if (key >= hash->capacidad){
             key = 0;
@@ -125,33 +131,33 @@ bool hash_pertenece_interno(unsigned long key){
     if(hash->campo[key]->estado == 1 && hash->campo[key]->clave == clave){
         return true;
     }
-    return false
+    return false;
 }
 
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    return hash_pertenece_interno(posicion);
+    return hash_pertenece_interno(posicion,hash,clave);
 }
 
 
 void *hash_obtener(const hash_t *hash, const char *clave){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    if (!hash_pertenece_interno(posicion)){
+    if (!hash_pertenece_interno(posicion,hash,clave)){
         return NULL;
     }
-    return hash->campo[posicion]->valor;
+    return (hash->campo[posicion]->valor);
 }
 
 
 size_t hash_cantidad(const hash_t *hash){
-    return hash->cantidad;
+    return (hash->cantidad);
 }
 
 
 void *hash_borrar(hash_t *hash, const char *clave){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    if (!hash_pertenece_interno(posicion)){
+    if (!hash_pertenece_interno(posicion,hash,clave)){
         return NULL;
     }
     void* a_devolver = hash->campo[posicion]->valor;
@@ -159,4 +165,19 @@ void *hash_borrar(hash_t *hash, const char *clave){
     hash->cantidad -= 1;
     hash->borrados += 1;
     return a_devolver;
+}
+
+
+
+void hash_destruir(hash_t *hash){
+    for (int i = 0; i < hash->capacidad;i++){
+        if(hash->campo[i]->estado != 0){
+            if (hash->destruir_dato != NULL){
+                hash->destruir_dato(hash->campo[i]->clave);
+                hash->destruir_dato(hash->campo[i]->valor);
+            }
+            free(hash->campo[i]);
+        }
+    }free(hash->campo);
+    free(hash);
 }
