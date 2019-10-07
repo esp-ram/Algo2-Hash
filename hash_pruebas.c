@@ -48,6 +48,41 @@ static void prueba_iterar_hash_vacio()
 }
 */
 
+void prueba_ramiro(){
+    printf("\nprueba hash RAMIRO\n");
+    hash_t* hash = hash_crear(NULL);
+
+    char *clave1 = "perro", *valor1 = "guau";
+    char *clave2 = "gato", *valor2 = "miau";
+    char *clave3 = "vaca", *valor3 = "mu";
+    char *clave4 = "TEST1", *valor4 = "test1";
+
+    print_test("Prueba hash insertar clave1", hash_guardar(hash, clave1, valor1));
+    print_test("Prueba hash obtener clave1 es valor1", hash_obtener(hash, clave1) == valor1);
+    print_test("Prueba hash pertenece clave1, es true", hash_pertenece(hash, clave1));
+
+    print_test("Prueba hash insertar clave2", hash_guardar(hash, clave2, valor2));
+    print_test("Prueba hash obtener clave2 es valor2", hash_obtener(hash, clave2) == valor2);
+    print_test("Prueba hash pertenece clave2, es true", hash_pertenece(hash, clave2));
+
+    print_test("Prueba hash insertar clave3", hash_guardar(hash, clave3, valor3));
+    print_test("Prueba hash obtener clave3 es valor3", hash_obtener(hash, clave3) == valor3);
+    print_test("Prueba hash pertenece clave3, es true", hash_pertenece(hash, clave3));
+
+    print_test("Prueba hash insertar clave4", hash_guardar(hash, clave4, valor4));
+    print_test("Prueba hash obtener clave4 es valor4", hash_obtener(hash, clave4) == valor4);
+    print_test("Prueba hash pertenece clave4, es true", hash_pertenece(hash, clave4));
+
+    print_test("Prueba hash obtener clave1 es valor1", hash_obtener(hash, clave1) == valor1);
+    print_test("Prueba hash obtener clave2 es valor2", hash_obtener(hash, clave2) == valor2);
+    print_test("Prueba hash obtener clave3 es valor3", hash_obtener(hash, clave3) == valor3);
+    print_test("Prueba hash obtener clave4 es valor4", hash_obtener(hash, clave4) == valor4);
+
+    hash_destruir(hash);
+}
+
+
+
 static void prueba_hash_insertar()
 {
     printf("\nprueba hash insertar\n");
@@ -418,17 +453,22 @@ static void prueba_hash_iterar_volumen(size_t largo)
 void pruebas_hash_catedra()
 {
     /* Ejecuta todas las pruebas unitarias. */
-    prueba_crear_hash_vacio();
+    //prueba_crear_hash_vacio();
     //prueba_iterar_hash_vacio();
-    prueba_hash_insertar();
-    prueba_hash_reemplazar();
-    prueba_hash_reemplazar_con_destruir();
-    prueba_hash_borrar();
-    prueba_hash_clave_vacia();
-    prueba_hash_valor_null();
-    prueba_hash_volumen(5000, true);
+    //prueba_hash_insertar();
+    //prueba_hash_reemplazar();
+    //prueba_hash_reemplazar_con_destruir();
+    //prueba_hash_borrar();
+    //prueba_hash_clave_vacia();
+    //prueba_hash_valor_null();
+    //prueba_hash_volumen(5000, true);
     //prueba_hash_iterar();
     //prueba_hash_iterar_volumen(5000);
+
+
+
+
+    prueba_ramiro();
 }
 
 void pruebas_volumen_catedra(size_t largo)
