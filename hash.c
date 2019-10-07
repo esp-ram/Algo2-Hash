@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#define TAM_INICIAL 2
-#define FACTOR_CARGA_SUPERIOR 0.6
-#define FACTOR_CARGA_INFERIOR 0.2
+#define TAM_INICIAL 5
+#define FACTOR_CARGA_SUPERIOR 0.7
+#define FACTOR_CARGA_INFERIOR 0.3
 #define FACTOR_REDIMENSION 2
 
 
@@ -48,7 +48,6 @@ campo_t* new_campo(){
 bool hash_guardar(hash_t *hash, const char *clave, void *dato);
 
 void redimensionar_hash(hash_t* hash,size_t tamano){
-    printf("REDIM\n");
     campo_t** campo_viejo = hash->campo;
     size_t capacidad_vieja = hash->capacidad;
     campo_t** campo_redimensionado = malloc((tamano * sizeof(campo_t*)));
@@ -84,7 +83,7 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
         return NULL;
     }
 
-    for(int i = 0;i< TAM_INICIAL;i++){
+    for(int i = 0;i < TAM_INICIAL;i++){
         nuevo_hash->campo[i] = new_campo();
     }
 
@@ -99,27 +98,40 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    if ((hash->campo[posicion]->estado == 1)&&(strcmp(hash->campo[posicion]->clave, clave) == 0)){
-        void* dato_a_destruir = hash->campo[posicion]->valor;
-        if (hash->destruir_dato != NULL){
-            hash->destruir_dato(dato_a_destruir);
-        }
-    }else{
-        while(hash->campo[posicion]->estado != 0){
-            posicion ++;
+
+    while(hash->campo[posicion]->estado != 0){
+        if ((hash->campo[posicion]->estado == 1)&&(strcmp(hash->campo[posicion]->clave, clave) == 0)){
+            void* dato_a_destruir = hash->campo[posicion]->valor;
+            if (hash->destruir_dato != NULL){
+                hash->destruir_dato(dato_a_destruir);
+            }
+            hash->campo[posicion]->estado = 0;
+        }else{
+            posicion += 1;
             if (posicion >= hash->capacidad){
                 posicion = 0;
             }
         }
+    }
+
+    if (hash->campo[posicion]->estado == 0){
         hash->campo[posicion]->clave = calloc(strlen(clave)+1,sizeof(char));
         strcpy(hash->campo[posicion]->clave, clave);
         hash->cantidad += 1;
     }
+
     hash->campo[posicion]->valor = dato;
     hash->campo[posicion]->estado = 1;
+
     if ((hash->cantidad + hash->borrados)/hash->capacidad >= FACTOR_CARGA_SUPERIOR){
         redimensionar_hash(hash,hash->capacidad * FACTOR_REDIMENSION);
+        /////////////////////////DEBUG///////////////////
+        printf("DEBUG REDIMENSION: guardar\n");
+        /////////////////////////DEUBG//////////////////////
     }
+    ////////////////////////DEBUG/////////
+    //printf("DEBUG GUARDAR: posicion %ld\n",posicion);
+    //////////////////////////////////
     return true;
 }
 
@@ -169,6 +181,9 @@ void *hash_borrar(hash_t *hash, const char *clave){
 
     if ((hash->cantidad + hash->borrados)/hash->capacidad >= FACTOR_CARGA_INFERIOR){
         redimensionar_hash(hash,hash->capacidad / FACTOR_REDIMENSION);
+        /////////////////////////DEBUG///////////////////
+        printf("DEBUG REDIMENSION: borrar\n");
+        /////////////////////////DEUBG//////////////////////
     }
 
     return a_devolver;
