@@ -114,7 +114,7 @@ void prueba_ramiro(){
     print_test("Prueba hash obtener clave6 es valor6", hash_obtener(hash, clave6) == valor6);
     print_test("Prueba hash obtener clave7 es valor7", hash_obtener(hash, clave7) == valor7);
     print_test("Prueba hash obtener clave8 es valor8", hash_obtener(hash, clave8) == valor8);
-        print_test("Prueba hash obtener clave9 es valor9", hash_obtener(hash, clave9) == valor9);
+    print_test("Prueba hash obtener clave9 es valor9", hash_obtener(hash, clave9) == valor9);
 
     hash_destruir(hash);
 }
@@ -499,7 +499,7 @@ void pruebas_hash_catedra()
     //prueba_hash_borrar();
     //prueba_hash_clave_vacia();
     //prueba_hash_valor_null();
-    prueba_hash_volumen(5000, true);
+    //prueba_hash_volumen(5000, true);
     //prueba_hash_iterar();
     //prueba_hash_iterar_volumen(5000);
 
