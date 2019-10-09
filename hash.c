@@ -2,14 +2,15 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include "hash.h"
 #define TAM_INICIAL 32
 #define FACTOR_CARGA 0.6
 #define FACTOR_REDIMENSION 2
 
 
-
-
 typedef void (*hash_destruir_dato_t)(void *);
+
+//---------------------FUNCION DE HASHING----------------------------------------//
 
 static unsigned long hashing_sdbm(const char *str){
   unsigned long hash = 0;
@@ -20,6 +21,7 @@ static unsigned long hashing_sdbm(const char *str){
   return hash;
 }
 
+//-------------------------------------------------------------------------------//
 
 ///ESTADOS: 0 = vacio,1 = ocupado, -1 = borrado///
 typedef struct campo{
@@ -46,9 +48,8 @@ campo_t* new_campo(){
     return nuevo_campo;
 }
 
-bool hash_guardar(hash_t *hash, const char *clave, void *dato);
 
-
+/////////////////////////////////////////////////////////ADDED TAG
 void redimensionar_hash(hash_t* hash,size_t tamano){
     campo_t** campo_viejo = hash->campo;
     size_t capacidad_vieja = hash->capacidad;
@@ -80,6 +81,13 @@ void redimensionar_hash(hash_t* hash,size_t tamano){
 }
 
 
+//-------------------------------------------------------------------------------------------------------------------------
+//                                              PRIMITIVAS DEL HASH
+//-------------------------------------------------------------------------------------------------------------------------
+//Recibe una funcion destruir para el tipo de dato que se vaya a guardar en el hash
+//Crea la estructura hash devolviendo un puntero a ella
+//Pre: La funcion destruir puede ser NULL en caso de no ser necesaria
+//Post: Se instanciaron los atributos de la estructura y se esta fue creada
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* nuevo_hash = malloc(sizeof(hash_t));
     if (nuevo_hash == NULL) {
@@ -104,6 +112,11 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 }
 
 
+//Recibe un puntero a un hash, una clave del hash y cualquier tipo de dato a guardar
+//Guarda el dato en su respectiva clave dentro del hash
+//Devuelve true en caso de exito, o false en caso de no haber podido guardar el dato
+//Pre: Si la clave no existia se crea una y se guarda el dato, el puntero al hash no es Nulo
+//Post: Se guardo el dato en la clave pasada por paremtro, dentro del hash
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
     //REEMPLAZO
@@ -131,39 +144,6 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     return true;
 }
 
-bool hash_pertenece_interno(unsigned long key,const hash_t* hash,const char* clave){
-    while((hash->campo[key]->estado != 0) && (strcmp(hash->campo[key]->clave, clave) != 0)){
-        key ++;
-        if (key >= hash->capacidad){
-            key = 0;
-        }
-    }
-    if((hash->campo[key]->estado == 1) && (strcmp(hash->campo[key]->clave, clave) == 0)){
-        return true;
-    }
-    return false;
-}
-
-
-bool hash_pertenece(const hash_t *hash, const char *clave){
-    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    return hash_pertenece_interno(posicion,hash,clave);
-}
-
-
-void *hash_obtener(const hash_t *hash, const char *clave){
-    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    if (!hash_pertenece_interno(posicion,hash,clave)){
-        return NULL;
-    }
-    return (hash->campo[posicion]->valor);
-}
-
-
-size_t hash_cantidad(const hash_t *hash){
-    return (hash->cantidad);
-}
-
 
 void *hash_borrar(hash_t *hash, const char *clave){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
@@ -181,6 +161,55 @@ void *hash_borrar(hash_t *hash, const char *clave){
 }
 
 
+//Recibe un puntero a hash y una clave perteneciente al hash, si no existe devuelve NULL,
+//Devuelve el dato contenido en la posicion de la clave del hash
+//Pre: El hash fue creado
+//Post: Dedevolvio el valor contenido en la clave, o NULL en caso de que la clave no pertenezca al hash
+void *hash_obtener(const hash_t *hash, const char *clave){
+    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
+    if (!hash_pertenece_interno(posicion,hash,clave)){
+        return NULL;
+    }
+    return (hash->campo[posicion]->valor);
+}
+
+
+//Recibe un puntero a hash y una clave, se fija si esta pertenece al hash y devuelve true en dicho caso
+//o false en caso contrario
+//Pre: El hash fue creado
+//Post: Se devolvio true o false en caso de pertenecer o no, la clave, al hash
+bool hash_pertenece(const hash_t *hash, const char *clave){
+    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
+    return hash_pertenece_interno(posicion,hash,clave);
+}
+
+
+/////////////////////////////////////////////////////////ADDED TAG
+bool hash_pertenece_interno(unsigned long key,const hash_t* hash,const char* clave){
+    while((hash->campo[key]->estado != 0) && (strcmp(hash->campo[key]->clave, clave) != 0)){
+        key ++;
+        if (key >= hash->capacidad){
+            key = 0;
+        }
+    }
+    if((hash->campo[key]->estado == 1) && (strcmp(hash->campo[key]->clave, clave) == 0)){
+        return true;
+    }
+    return false;
+}
+
+
+//Recibe un puntero a hash y devuelve la cantidad de claves contenidas
+//Pre: El hash fue creado
+//Post: Se devolvio la cantidad de claves guardadas en el hash
+size_t hash_cantidad(const hash_t *hash){
+    return (hash->cantidad);
+}
+
+
+//Recibe un puntero a hash, y lo borra, aplicandole su funcion desdtruir a cada elemento
+//Pre: El hash fue creado
+//Post: Se liberaron todos los datos contenidos en el hash y el hash mismo a su vez
 void hash_destruir(hash_t *hash){
     for (int i = 0; i < hash->capacidad;i++){
         if(hash->campo[i]->estado != 0){
