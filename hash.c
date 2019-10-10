@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#define TAM_INICIAL 14
+#define TAM_INICIAL 101
 #define FACTOR_CARGA_SUPERIOR 0.7
 #define FACTOR_CARGA_INFERIOR 0.3
 #define FACTOR_REDIMENSION 2
@@ -22,7 +22,8 @@ static unsigned long hashing_sdbm(const char *str){
 }
 
 
-///ESTADOS: 0 = vacio,1 = ocupado, -1 = borrado, 2 = TEST GUARDAR///
+///ESTADOS: 0 = vacio,1 = ocupado, -1 = borrado, 2 = sobreescritura///
+
 typedef struct campo{
     char* clave;
     void* valor;
@@ -41,6 +42,16 @@ typedef struct hash{
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato);
 
+
+void inicializa_campos(hash_t* hash){
+    for(int i = 0;i < hash->capacidad; i++){
+        hash->campo[i].clave = NULL;
+        hash->campo[i].valor = NULL;
+        hash->campo[i].estado = 0;
+    }
+}
+
+
 void redimensionar_hash(hash_t* hash,size_t tamano){
     campo_t* campo_viejo = hash->campo;
     size_t capacidad_vieja = hash->capacidad;
@@ -50,12 +61,18 @@ void redimensionar_hash(hash_t* hash,size_t tamano){
         hash->cantidad = 0;
         hash->borrados = 0;
         hash->campo = campo_redimensionado;
+        inicializa_campos(hash);
 
-        for(int j = 0;j < hash->capacidad;j++){
-            hash->campo[j].clave = NULL;
-            hash->campo[j].valor = NULL;
-            hash->campo[j].estado = 0;
+
+        for (int i = 0; i<capacidad_vieja; i++){
+            if(campo_viejo[i].estado != 0){
+                if(campo_viejo[i].estado == 1){
+                    hash_guardar(hash,campo_viejo[i].clave,campo_viejo[i].valor);
+                }
+            }
+            free(campo_viejo[i].clave);
         }
+        free(campo_viejo);
     }
 }
 
@@ -65,22 +82,18 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
     if (nuevo_hash == NULL) {
         return NULL;
     }
+
     nuevo_hash->campo = malloc(TAM_INICIAL * sizeof(campo_t));
     if (nuevo_hash->campo == NULL){
         free(nuevo_hash);
         return NULL;
     }
 
-    for(int i = 0;i < TAM_INICIAL;i++){
-        nuevo_hash->campo[i].clave = NULL;
-        nuevo_hash->campo[i].valor = NULL;
-        nuevo_hash->campo[i].estado = 0;
-    }
-
     nuevo_hash->capacidad = TAM_INICIAL;
     nuevo_hash->cantidad = 0;
     nuevo_hash->borrados = 0;
     nuevo_hash->destruir_dato = destruir_dato;
+    inicializa_campos(nuevo_hash);
 
     return nuevo_hash;
 }
@@ -108,26 +121,19 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
     if (hash->campo[posicion].estado == 0){
         hash->campo[posicion].clave = calloc(strlen(clave)+1,sizeof(char));
         if (hash->campo[posicion].clave == NULL){
-            return NULL;
+            return false;
         }
         strcpy(hash->campo[posicion].clave, clave);
         hash->cantidad += 1;
     }
-
     hash->campo[posicion].valor = dato;
     hash->campo[posicion].estado = 1;
 
-    if ((hash->cantidad + hash->borrados)/hash->capacidad > FACTOR_CARGA_SUPERIOR){
+    if (((float)hash->cantidad + (float)hash->borrados) / (float)hash->capacidad >= FACTOR_CARGA_SUPERIOR){
         redimensionar_hash(hash,hash->capacidad * FACTOR_REDIMENSION);
-        /////////////////////////DEBUG///////////////////
-        printf("DEBUG REDIMENSION: guardar\n");
-        /////////////////////////DEUBG//////////////////////
     }
-
-
     return true;
 }
-
 
 
 unsigned long ubicacion_correcta(const hash_t *hash, const char *clave){
@@ -142,6 +148,7 @@ unsigned long ubicacion_correcta(const hash_t *hash, const char *clave){
             }
         }
     }
+    return posicion;
 }
 
 
@@ -187,19 +194,11 @@ void *hash_borrar(hash_t *hash, const char *clave){
     hash->cantidad -= 1;
     hash->borrados += 1;
 
-    if ((hash->cantidad + hash->borrados)/(hash->capacidad) <= FACTOR_CARGA_INFERIOR && ((hash->capacidad) > TAM_INICIAL)){
+    if (((float)hash->cantidad / (float)hash->capacidad) <= FACTOR_CARGA_INFERIOR && ((hash->capacidad) > TAM_INICIAL)){
         redimensionar_hash(hash,hash->capacidad / FACTOR_REDIMENSION);
-        /////////////////////////DEBUG///////////////////
-        printf("DEBUG REDIMENSION: borrar\n");
-        /////////////////////////DEUBG//////////////////////
     }
-
     return a_devolver;
 }
-
-
-
-
 
 
 void hash_destruir(hash_t *hash){
