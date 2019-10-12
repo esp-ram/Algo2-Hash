@@ -138,14 +138,10 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
 unsigned long ubicacion_correcta(const hash_t *hash, const char *clave){
     unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    while(hash->campo[posicion].estado != 0){
-        if ((hash->campo[posicion].estado == 1) && (strcmp(hash->campo[posicion].clave, clave) == 0)){
-            return posicion;
-        }else{
-            posicion += 1;
-            if (posicion >= hash->capacidad){
-                posicion = 0;
-            }
+    while((hash->campo[posicion].estado != 0) && (strcmp(hash->campo[posicion].clave, clave) != 0)){
+        posicion += 1;
+        if (posicion >= hash->capacidad){
+            posicion = 0;
         }
     }
     return posicion;
@@ -153,24 +149,17 @@ unsigned long ubicacion_correcta(const hash_t *hash, const char *clave){
 
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
-    unsigned long posicion = hashing_sdbm(clave)%(hash->capacidad);
-    while(hash->campo[posicion].estado != 0){
-        if ((hash->campo[posicion].estado == 1) && (strcmp(hash->campo[posicion].clave, clave) == 0)){
-            return true;
-        }else{
-            posicion += 1;
-            if (posicion >= hash->capacidad){
-                posicion = 0;
-            }
-        }
+    unsigned long posicion = ubicacion_correcta(hash,clave);
+    if((hash->campo[posicion].estado == 1) && strcmp(hash->campo[posicion].clave, clave) == 0){
+        return true;
     }
     return false;
 }
 
 
 void *hash_obtener(const hash_t *hash, const char *clave){
-    if (hash_pertenece(hash,clave)){
-        unsigned long posicion = ubicacion_correcta(hash,clave);
+    unsigned long posicion = ubicacion_correcta(hash,clave);
+    if((hash->campo[posicion].estado == 1) && strcmp(hash->campo[posicion].clave, clave) == 0){
         return hash->campo[posicion].valor;
     }
     return NULL;
