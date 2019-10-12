@@ -212,3 +212,63 @@ void hash_destruir(hash_t *hash){
     }free(hash->campo);
     free(hash);
 }
+
+
+
+
+
+typedef struct hash_iter hash_iter_t;
+
+struct hash_iter{
+    const hash_t* hash;
+    size_t posicion;
+};
+//--------------------------------------------------------------------
+
+void avanza_a_ocupado(hash_iter_t* iter){
+    while((iter->posicion < iter->hash->capacidad) && iter->hash->campo[iter->posicion].estado != 1){
+            iter->posicion += 1;
+    }
+}
+
+
+// Crea iterador
+hash_iter_t* hash_iter_crear(const hash_t* hash){
+    if(!hash) return NULL;
+    hash_iter_t* iter = malloc(sizeof(hash_iter_t));
+    if(!iter) return NULL;
+    iter->hash = hash;
+    iter->posicion = 0;
+    avanza_a_ocupado(iter);
+    return iter;
+}
+//---------------------------------------------------
+
+// Comprueba si terminó la iteración
+bool hash_iter_al_final(const hash_iter_t* iter){
+    return ((size_t)iter->posicion == (size_t)iter->hash->capacidad);
+}
+
+//------------------------------------------------------
+
+// Avanza iterador
+bool hash_iter_avanzar(hash_iter_t* iter){
+    if(hash_iter_al_final(iter)) return false;
+    iter->posicion += 1;
+    avanza_a_ocupado(iter);
+    return true;
+}
+//---------------------------------------------------
+
+// Devuelve clave actual, esa clave no se puede modificar ni liberar.
+char* hash_iter_ver_actual(const hash_iter_t* iter){
+    if(hash_iter_al_final(iter) || iter->hash->campo[iter->posicion].estado != 1) return NULL;
+    return (char*)iter->hash->campo[iter->posicion].clave;
+}
+//---------------------------------------------------
+
+
+// Destruye iterador
+void hash_iter_destruir(hash_iter_t* iter){
+    free(iter);
+}
