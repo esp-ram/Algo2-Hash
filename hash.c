@@ -47,19 +47,23 @@ typedef struct hash{
 bool hash_guardar(hash_t* hash, const char* clave, void* dato);
 
 /////////////////////////////////////////////////////////ADDED TAG
-void campo_crear(hash_t* hash){
+campo_t** campo_crear(hash_t* hash){
+    campo_t** campo = malloc(hash->capacidad*sizeof(campo_t*));
+    if (!campo) return NULL;
     for(int i = 0;i < hash->capacidad; i++){
-        hash->campo[i]->clave = NULL;
-        hash->campo[i]->valor = NULL;
-        hash->campo[i]->estado = 0;
+        campo[i]->clave = NULL;
+        campo[i]->valor = NULL;
+        campo[i]->estado = 0;
     }
+    return campo;
 }
 
 /////////////////////////////////////////////////////////ADDED TAG
 void redimensionar(hash_t* hash,size_t tamano){
     campo_t** campo_viejo = hash->campo;
     size_t capacidad_vieja = hash->capacidad;
-    campo_t** campo_redimensionado = malloc((tamano*sizeof(campo_t*)));
+    campo_t** campo_redimensionado = malloc(tamano*sizeof(campo_t*));
+    if (!campo_redimensionado) return;
     if (campo_redimensionado != NULL){
         hash->capacidad = tamano;
         hash->cantidad = 0;
@@ -84,11 +88,9 @@ void redimensionar(hash_t* hash,size_t tamano){
 
 hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
     hash_t* nuevo_hash = malloc(sizeof(hash_t));
-    if (nuevo_hash == NULL) {
-        return NULL;
-    }
+    if (nuevo_hash == NULL) return NULL;
     nuevo_hash->campo = malloc(CAPACIDAD_INICIAL*sizeof(campo_t*));
-    if (nuevo_hash->campo == NULL){
+    if (!nuevo_hash->campo){
         free(nuevo_hash);
         return NULL;
     }
@@ -96,7 +98,7 @@ hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
     nuevo_hash->cantidad = 0;
     nuevo_hash->borrados = 0;
     nuevo_hash->destruir_dato = destruir_dato;
-    campo_crear(nuevo_hash);
+    nuevo_hash->campo = campo_crear(nuevo_hash);
     return nuevo_hash;
 }
 
@@ -111,7 +113,7 @@ bool hash_guardar(hash_t* hash, const char* clave, void* dato){
             hash->campo[posicion]->valor = NULL;
             hash->campo[posicion]->estado = 2;
         }else{
-            posicion += 1;
+            posicion ++;
             if (posicion >= hash->capacidad){
                  posicion = 0;
             }
@@ -123,12 +125,12 @@ bool hash_guardar(hash_t* hash, const char* clave, void* dato){
             return false;
         }
         strcpy(hash->campo[posicion]->clave, clave);
-        hash->cantidad += 1;
+        hash->cantidad++;
     }
     hash->campo[posicion]->valor = dato;
     hash->campo[posicion]->estado = 1;
     if (((float)hash->cantidad + (float)hash->borrados) / (float)hash->capacidad >= FACTOR_DE_CARGA_MAX){
-        redimensionar(hash,hash->capacidad*  FACTOR_REDIMENSION);
+        redimensionar(hash);
     }
     return true;
 }
@@ -136,39 +138,30 @@ bool hash_guardar(hash_t* hash, const char* clave, void* dato){
 /////////////////////////////////////////////////////////ADDED TAG
 size_t  ubicacion_correcta(const hash_t* hash, const char* clave){
     size_t  posicion = funcion_de_hashing(clave)%(hash->capacidad);
-    while(hash->campo[posicion]->estado != 0){
-        if ((hash->campo[posicion]->estado == 1) && (strcmp(hash->campo[posicion]->clave, clave) == 0)){
-            return posicion;
-        }else{
-            posicion += 1;
-            if (posicion >= hash->capacidad){
-                posicion = 0;
-            }
+    while((hash->campo[posicion]->estado != 0) && (strcmp(hash->campo[posicion]->clave, clave) != 0)){
+        posicion ++;
+        if (posicion >= hash->capacidad){
+           posicion = 0;
         }
     }
     return posicion;
 }
 
 bool hash_pertenece(const hash_t* hash, const char* clave){
-    size_t  posicion = funcion_de_hashing(clave)%(hash->capacidad);
+    size_t  posicion = ubicacion_correcta(hash, clave);
     while(hash->campo[posicion]->estado != 0){
         if ((hash->campo[posicion]->estado == 1) && (strcmp(hash->campo[posicion]->clave, clave) == 0)){
             return true;
-        }else{
-            posicion += 1;
-            if (posicion >= hash->capacidad){
-                posicion = 0;
-            }
         }
     }
     return false;
 }
 
 void* hash_obtener(const hash_t* hash, const char* clave){
-    if (hash_pertenece(hash,clave)){
-        size_t  posicion = ubicacion_correcta(hash,clave);
-        return hash->campo[posicion]->valor;
-    }
+ 	size_t  posicion = ubicacion_correcta(hash,clave);
+	if((hash->campo[posicion]->estado == 1) && strcmp(hash->campo[posicion]->clave == clave)){
+		return hash->campo[posicion]->valor;
+	}
     return NULL;
 }
 
@@ -177,7 +170,7 @@ size_t hash_cantidad(const hash_t* hash){
 }
 
 void* hash_borrar(hash_t* hash, const char* clave){
-    size_t  posicion;
+    size_t posicion;
     if (hash_pertenece(hash,clave)){
         posicion = ubicacion_correcta(hash,clave);
     }else{
@@ -185,16 +178,16 @@ void* hash_borrar(hash_t* hash, const char* clave){
     }
     void* a_devolver = hash->campo[posicion]->valor;
     hash->campo[posicion]->estado = -1;
-    hash->cantidad -= 1;
-    hash->borrados += 1;
+    hash->cantidad --;
+    hash->borrados ++;
     if (((float)hash->cantidad / (float)hash->capacidad) <= FACTOR_DE_CARGA_MIN && ((hash->capacidad) > CAPACIDAD_INICIAL)){
-        redimensionar(hash,hash->capacidad / FACTOR_REDIMENSION);
+        redimensionar(hash);
     }
     return a_devolver;
 }
 
 void hash_destruir(hash_t* hash){
-    for (int i = 0; i < hash->capacidad;i++){
+    for (int i = 0; i < hash->capacidad; i++){
         if(hash->campo[i]->estado != 0){
             if (hash->destruir_dato != NULL){
                 hash->destruir_dato(hash->campo[i]->valor);
@@ -238,19 +231,19 @@ bool hash_iter_al_final(const hash_iter_t* iter){
 
 // Avanza iterador
 bool hash_iter_avanzar(hash_iter_t* iter){
-    if (!iter || hash_iter_al_final(iter)) return false;
-    if (iter->posicion < iter->hash->capacidad){
-        iter->posicion++;
-        iter->actual = iter->hash->campo[iter->posicion];
-        return true;
-    }
+    if (hash_iter_al_final(iter)) return false;
+    iter->posicion++;
+    iter->actual = iter->hash->campo[iter->posicion];
+    return true;
 }
 //---------------------------------------------------
 
 // Devuelve clave actual, esa clave no se puede modificar ni liberar.
-char* hash_iter_ver_actual(const hash_iter_t* iter){
-    if(!iter) return NULL;
-    return (char*)iter->hash->campo[iter->posicion]->clave;
+const char* hash_iter_ver_actual(const hash_iter_t* iter){
+    if(hash_iter_al_final(iter) || iter->hash->campo[iter->posicion]->estado == 1){
+    	return (const char*)iter->hash->campo[iter->posicion]->clave;
+    }
+    return NULL;
 }
 //---------------------------------------------------
 
