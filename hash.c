@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#define CAPACIDAD_INICIAL 100
+#define CAPACIDAD_INICIAL 101
 #define FACTOR_DE_CARGA_MAX 0.7
 #define FACTOR_DE_CARGA_MIN 0.3
 #define FACTOR_REDIMENSION 2
@@ -35,7 +35,7 @@ typedef struct campo{
 }campo_t;
 
 /*
-POSIBLES ESTADOS DE UN CAMPO: 
+POSIBLES ESTADOS DE UN CAMPO:
     * 0 = vacio,
     * 1 = ocupado
     * -1 = borrado
@@ -190,12 +190,15 @@ void* hash_borrar(hash_t* hash, const char* clave){
 void hash_destruir(hash_t* hash){
     for (int i = 0; i < hash->capacidad; i++){
         if(hash->campo[i].estado != 0){
-            if (hash->destruir_dato != NULL){
-                hash->destruir_dato(hash->campo[i].valor);
+            if(hash->campo[i].estado == 1){
+                if (hash->destruir_dato != NULL){
+                    hash->destruir_dato(hash->campo[i].valor);
+                }
             }
             free(hash->campo[i].clave);
         }
-    }free(hash->campo);
+    }
+    free(hash->campo);
     free(hash);
 }
 
