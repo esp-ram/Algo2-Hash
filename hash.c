@@ -61,22 +61,20 @@ bool redimensionar(hash_t* hash, size_t tamano){
     size_t capacidad_vieja = hash->capacidad;
     campo_t* campo_redimensionado = malloc((tamano*  sizeof(campo_t)));
     if (campo_redimensionado == NULL) return false;
-    else{
-        hash->capacidad = tamano;
-        hash->cantidad = 0;
-        hash->borrados = 0;
-        hash->campo = campo_redimensionado;
-        inicializar_campos(hash);
-        for (int i = 0; i<capacidad_vieja; i++){
-            if(campo_viejo[i].estado != VACIO){
-                if(campo_viejo[i].estado == OCUPADO){
-                    hash_guardar(hash,campo_viejo[i].clave,campo_viejo[i].valor);
-                }
+    hash->capacidad = tamano;
+    hash->cantidad = 0;
+    hash->borrados = 0;
+    hash->campo = campo_redimensionado;
+    inicializar_campos(hash);
+    for (int i = 0; i<capacidad_vieja; i++){
+        if(campo_viejo[i].estado != VACIO){
+            if(campo_viejo[i].estado == OCUPADO){
+                hash_guardar(hash,campo_viejo[i].clave,campo_viejo[i].valor);
             }
-            free(campo_viejo[i].clave);
         }
-        free(campo_viejo);
+        free(campo_viejo[i].clave);
     }
+    free(campo_viejo);
     return true;
 }
 /********************************************************************
@@ -90,8 +88,8 @@ hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
     }
     nuevo_hash->campo = malloc(CAPACIDAD_INICIAL*  sizeof(campo_t));
     if (nuevo_hash->campo == NULL){
-	    free(nuevo_hash);
-	    return NULL;
+        free(nuevo_hash);
+        return NULL;
     }
     nuevo_hash->capacidad = CAPACIDAD_INICIAL;
     nuevo_hash->cantidad = 0;
@@ -164,12 +162,8 @@ size_t hash_cantidad(const hash_t* hash){
 }
 
 void* hash_borrar(hash_t* hash, const char* clave){
-    size_t posicion;
-    if (hash_pertenece(hash,clave)){ 
-        posicion = ubicacion_correcta(hash, clave);
-    // Acá usamos 2 veces ubicacion_correcta() - 1 vez para 
-    //el booleano que devuelve hash_pertenece() y otra para tener el indice de la clave
-    }else{
+    size_t posicion = ubicacion_correcta(hash, clave);
+    if (hash->campo[posicion].estado != OCUPADO){
         return NULL;
     }
     void* a_devolver = hash->campo[posicion].valor;
@@ -185,8 +179,10 @@ void* hash_borrar(hash_t* hash, const char* clave){
 void hash_destruir(hash_t* hash){
     for (int i = 0; i < hash->capacidad; i++){
         if(hash->campo[i].estado != VACIO){
-            if (hash->destruir_dato != NULL){
-                hash->destruir_dato(hash->campo[i].valor);
+            if(hash->campo[i].estado == OCUPADO){
+                if (hash->destruir_dato != NULL){
+                    hash->destruir_dato(hash->campo[i].valor);
+                }
             }
             free(hash->campo[i].clave);
         }
@@ -214,7 +210,7 @@ hash_iter_t* hash_iter_crear(const hash_t* hash){
     if(!iter) return NULL;
     iter->hash = hash;
     iter->posicion = 0;
-    while((iter->posicion < iter->hash->capacidad) && iter->hash->campo[iter->posicion].estado != BORRADO){
+    while((iter->posicion < iter->hash->capacidad) && iter->hash->campo[iter->posicion].estado != OCUPADO){
             iter->posicion++;
     }
     return iter;
@@ -231,7 +227,7 @@ bool hash_iter_al_final(const hash_iter_t* iter){
 bool hash_iter_avanzar(hash_iter_t* iter){
     if (hash_iter_al_final(iter)) return false;
     iter->posicion++;
-    while((iter->posicion < iter->hash->capacidad) && iter->hash->campo[iter->posicion].estado != BORRADO){
+    while((iter->posicion < iter->hash->capacidad) && iter->hash->campo[iter->posicion].estado != OCUPADO){
             iter->posicion++;
     }
     return true;
@@ -240,7 +236,7 @@ bool hash_iter_avanzar(hash_iter_t* iter){
 
 // Devuelve clave actual, esa clave no se puede modificar ni liberar.
 const char* hash_iter_ver_actual(const hash_iter_t* iter){
-    if(hash_iter_al_final(iter) || iter->hash->campo[iter->posicion].estado == BORRADO) return NULL;
+    if(hash_iter_al_final(iter)) return NULL;
    	return (const char*)iter->hash->campo[iter->posicion].clave;
 }
 //---------------------------------------------------
