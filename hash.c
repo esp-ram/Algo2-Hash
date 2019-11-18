@@ -15,7 +15,7 @@
 
 typedef void (*hash_destruir_dato_t)(void* );
 
-typedef enum {VACIO, OCUPADO, BORRADO, SOBREESCRITURA} estado_t;
+typedef enum {VACIO, OCUPADO, BORRADO} estado_t;
 
 typedef struct campo{
     char* clave;
@@ -33,13 +33,13 @@ typedef struct hash{
 
 //-------------------------------FUNCION DE HASHING------------------------------//
 
-static size_t  funcion_de_hashing(const char* str, const hash_t* hash){
+static size_t  funcion_de_hashing(const char* str, size_t modulo){
   size_t  indice = 0;
   int c;
   while ((c =* str++)){
     indice = c + (indice << 6) + (indice << 16) - indice;
   }
-  return indice%hash->capacidad;
+  return indice%modulo;
 }
 
 //-------------------------------------------------------------------------------//
@@ -75,6 +75,27 @@ bool redimensionar(hash_t* hash, size_t tamano){
     free(campo_viejo);
     return true;
 }
+
+
+size_t  ubicacion_correcta(const hash_t* hash, const char* clave){
+    size_t  posicion = funcion_de_hashing(clave, hash->capacidad);
+    while(hash->campo[posicion].estado != VACIO){
+        if(hash->campo[posicion].estado == BORRADO || (strcmp(hash->campo[posicion].clave, clave) != 0)){
+            posicion++;
+            if (posicion >= hash->capacidad){
+               posicion = 0;
+           }
+       }else{
+           return posicion;
+       }
+    }
+    return posicion;
+}
+
+bool hash_pertenece(const hash_t* hash, const char* clave){
+    size_t  posicion = ubicacion_correcta(hash, clave);
+    return (hash->campo[posicion].estado == OCUPADO);
+}
 /********************************************************************
 *                       PRIMITIVAS DEL HASH CERRADO                 *
 *********************************************************************/
@@ -98,21 +119,11 @@ hash_t* hash_crear(hash_destruir_dato_t destruir_dato){
 }
 
 bool hash_guardar(hash_t* hash, const char* clave, void* dato){
-    size_t posicion = funcion_de_hashing(clave, hash);
-    while((hash->campo[posicion].estado != VACIO) && (hash->campo[posicion].estado != SOBREESCRITURA)){
-        if ((hash->campo[posicion].estado == OCUPADO)&&(strcmp(hash->campo[posicion].clave, clave) == 0)){
-            void* dato_a_destruir = hash->campo[posicion].valor;
-            if (hash->destruir_dato != NULL){
-                hash->destruir_dato(dato_a_destruir);
-            }
-            hash->campo[posicion].valor = NULL;
-            hash->campo[posicion].estado = SOBREESCRITURA;
-        }else{
-            posicion++;
-            if (posicion >= hash->capacidad){
-                 posicion = 0;
-             }
-         }
+    size_t posicion = ubicacion_correcta(hash, clave);
+    if (hash_pertenece(hash, clave)){
+        if (hash->destruir_dato != NULL){
+            hash->destruir_dato(hash->campo[posicion].valor);
+        }
     }
     if (hash->campo[posicion].estado == VACIO){
         hash->campo[posicion].clave = calloc(strlen(clave)+1,sizeof(char));
@@ -124,32 +135,12 @@ bool hash_guardar(hash_t* hash, const char* clave, void* dato){
     }
     hash->campo[posicion].valor = dato;
     hash->campo[posicion].estado = OCUPADO;
-    if (((float)hash->cantidad + (float)hash->borrados) / (float)hash->capacidad >= FACTOR_DE_CARGA_MAX){
+    if ((((float)hash->cantidad + (float)hash->borrados) / (float)hash->capacidad) >= FACTOR_DE_CARGA_MAX){
         redimensionar(hash,hash->capacidad*  FACTOR_REDIMENSION);
     }
     return true;
 }
 
-/////////////////////////////////////////////////////////FUNCION AUXILIAR
-size_t  ubicacion_correcta(const hash_t* hash, const char* clave){
-    size_t  posicion = funcion_de_hashing(clave, hash);
-    while(hash->campo[posicion].estado != VACIO){
-        if(hash->campo[posicion].estado == BORRADO || (strcmp(hash->campo[posicion].clave, clave) != 0)){
-            posicion++;
-            if (posicion >= hash->capacidad){
-               posicion = 0;
-           }
-       }else{
-           return posicion;
-       }
-    }
-    return posicion;
-}
-
-bool hash_pertenece(const hash_t* hash, const char* clave){
-    size_t  posicion = ubicacion_correcta(hash, clave);
-    return (hash->campo[posicion].estado == OCUPADO);
-}
 
 void* hash_obtener(const hash_t* hash, const char* clave){
  	size_t  posicion = ubicacion_correcta(hash,clave);
